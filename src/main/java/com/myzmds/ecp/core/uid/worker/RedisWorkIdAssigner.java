@@ -9,7 +9,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 /**
  * @类名称 RedisWorkIdAssigner.java
  * @类描述 <pre>Redis编号分配器</pre>
- * @作者  庄梦蝶殇 linhuaichuan@veredholdings.com
+ * @作者  庄梦蝶殇 linhuaichuan1989@126.com
  * @创建时间 2019年1月16日 下午3:32:07
  * @版本 1.0.1
  *
@@ -39,7 +39,7 @@ public class RedisWorkIdAssigner extends AbstractIntervalWorkId {
     public static final String UID_TEMPORARY = UID_ROOT.concat("temporary:");
     
     @Autowired
-    private RedisTemplate<String, Object> redisTemplate;
+    private RedisTemplate<Object, Object> redisTemplate;
     
     @Override
     public long action() {
@@ -60,7 +60,8 @@ public class RedisWorkIdAssigner extends AbstractIntervalWorkId {
             // b、 不存在，创建ip:port节点
             if (null == workerId) {
                 workerId = (long)uidWork.size();
-                redisTemplate.opsForZSet().add(UID_FOREVER, pidName, System.currentTimeMillis());// 使用zset 时间排序，保证有序性
+                // 使用zset 时间排序，保证有序性
+                redisTemplate.opsForZSet().add(UID_FOREVER, pidName, System.currentTimeMillis());
                 uidWork.add(pidName);
             }
         }

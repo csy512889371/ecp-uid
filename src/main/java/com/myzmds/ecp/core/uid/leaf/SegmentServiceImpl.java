@@ -5,13 +5,17 @@ import java.sql.SQLException;
 import java.util.Date;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowCallbackHandler;
+
+import com.myzmds.ecp.core.uid.baidu.utils.NamingThreadFactory;
 
 /**
  * @类名称 SegmentServiceImpl.java
@@ -32,9 +36,16 @@ import org.springframework.jdbc.core.RowCallbackHandler;
  */
 public class SegmentServiceImpl implements ISegmentService {
     
+    /**
+     * 线程名-心跳
+     */
+    public static final String THREAD_BUFFER_NAME = "leaf_buffer_sw";
+    
     private static ReentrantLock lock = new ReentrantLock();
     
-    // 创建线程池
+    /**
+     * 创建线程池
+     */
     private ExecutorService taskExecutor;
     
     /**
@@ -72,21 +83,25 @@ public class SegmentServiceImpl implements ISegmentService {
     public SegmentServiceImpl(JdbcTemplate jdbcTemplate, String bizTag) {
         this.jdbcTemplate = jdbcTemplate;
         if (taskExecutor == null) {
-            taskExecutor = Executors.newSingleThreadExecutor();
+            taskExecutor = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(), new NamingThreadFactory(THREAD_BUFFER_NAME));
         }
         this.bizTag = bizTag;
-        segment[0] = doUpdateNextSegment(bizTag);// 获取第一段buffer缓冲
+        // 获取第一段buffer缓冲
+        segment[0] = doUpdateNextSegment(bizTag);
         setSw(false);
-        currentId = new AtomicLong(segment[index()].getMinId()); // 初始id
+        // 初始id
+        currentId = new AtomicLong(segment[index()].getMinId());
     }
     
     @Override
     public Long getId() {
         // 1.0.1 fix:uid:ecp-190227001 #1(github)更改阈值(middle与max)lock在高速碰撞时的可能多次执行
-        Long nextId = null;// 下一个id
+        // 下一个id
+        Long nextId = null;
         if (segment[index()].getMiddleId().equals(currentId.longValue()) || segment[index()].getMaxId().equals(currentId.longValue())) {
             try {
                 lock.lock();
+                // 阈值50%时，加载下一个buffer
                 if (segment[index()].getMiddleId().equals(currentId.longValue())) {
                     thresholdHandler();
                     nextId = currentId.incrementAndGet();
@@ -100,14 +115,16 @@ public class SegmentServiceImpl implements ISegmentService {
             }
         }
         nextId = null == nextId ? currentId.incrementAndGet() : nextId;
-        return nextId <= segment[index()].getMaxId() ? nextId : getId();// 1.0.2 fix:uid:ecp-190306001 突破并发数被step限制的bug
+        // 1.0.2 fix:uid:ecp-190306001 突破并发数被step限制的bug
+        return nextId <= segment[index()].getMaxId() ? nextId : getId();
     }
     
     /**
      * 阈值处理，是否同/异步加载下一个buffer的值(即更新DB)
      */
     private void thresholdHandler() {
-        if (asynLoadingSegment) {// 异步处理-启动线程更新DB，有线程池执行
+        if (asynLoadingSegment) {
+            // 异步处理-启动线程更新DB，由线程池执行
             asynLoadSegmentTask = new FutureTask<>(new Callable<Boolean>() {
                 @Override
                 public Boolean call()
@@ -118,8 +135,8 @@ public class SegmentServiceImpl implements ISegmentService {
                 }
             });
             taskExecutor.submit(asynLoadSegmentTask);
-        } else {// 同步处理，直接更新DB
-            // 使用50%进行加载
+        } else {
+            // 同步处理，直接更新DB
             final int currentIndex = reIndex();
             segment[currentIndex] = doUpdateNextSegment(bizTag);
         }
@@ -129,7 +146,8 @@ public class SegmentServiceImpl implements ISegmentService {
      * buffer使用完时切换buffer。
      */
     public void fullHandler() {
-        if (asynLoadingSegment) {// 异步时，需判断 异步线程的状态(是否已经执行)
+        if (asynLoadingSegment) {
+            // 异步时，需判断 异步线程的状态(是否已经执行)
             try {
                 asynLoadSegmentTask.get();
             } catch (Exception e) {
@@ -138,8 +156,10 @@ public class SegmentServiceImpl implements ISegmentService {
                 segment[reIndex()] = doUpdateNextSegment(bizTag);
             }
         }
-        setSw(!isSw()); // 切换
-        currentId = new AtomicLong(segment[index()].getMinId()); // 进行切换
+        // 设置切换标识
+        setSw(!isSw());
+        // 进行切换
+        currentId = new AtomicLong(segment[index()].getMinId());
     }
     
     /**
@@ -178,7 +198,8 @@ public class SegmentServiceImpl implements ISegmentService {
         final IdSegment currentSegment = new IdSegment();
         this.jdbcTemplate.query(querySql, new String[] {bizTag}, new RowCallbackHandler() {
             @Override
-            public void processRow(ResultSet rs) throws SQLException {
+            public void processRow(ResultSet rs)
+                throws SQLException {
                 Long step = null;
                 Long currentMaxId = null;
                 step = rs.getLong("step");
@@ -205,7 +226,8 @@ public class SegmentServiceImpl implements ISegmentService {
             newSegment.setMaxId(newMaxId);
             return newSegment;
         } else {
-            return updateId(bizTag); // 递归，直至更新成功
+            // 递归，直至更新成功
+            return updateId(bizTag);
         }
     }
     
@@ -225,6 +247,7 @@ public class SegmentServiceImpl implements ISegmentService {
         this.jdbcTemplate = jdbcTemplate;
     }
     
+    @Override
     public void setBizTag(String bizTag) {
         this.bizTag = bizTag;
     }

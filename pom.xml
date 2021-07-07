@@ -33,9 +33,10 @@
 		
 		<mysql.version>5.1.47</mysql.version>
 		<slf4j.version>1.7.25</slf4j.version>
-		<zookeeper.version>3.4.13</zookeeper.version>
+		<zookeeper.version>3.4.14</zookeeper.version>
 
-		<junit.version>4.12</junit.version>
+		<lombok.version>1.18.4</lombok.version>
+		<junit.version>4.13.1</junit.version>
 	</properties>
 
 	<build>
@@ -125,12 +126,6 @@
 	</repositories>
 
     <dependencies>
-		<dependency>
-			<groupId>org.apache.commons</groupId>
-			<artifactId>commons-lang3</artifactId>
-			<version>${commons-lang3.version}</version>
-		</dependency>
-		
         <!-- Spring -->
         <dependency>
 			<groupId>org.springframework</groupId>
@@ -167,6 +162,12 @@
 			<version>${slf4j.version}</version>
 		</dependency>
         
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<version>${lombok.version}</version>
+			<scope>provided</scope>
+		</dependency>
         <!-- DB -->
         <dependency>
             <groupId>org.springframework</groupId>
@@ -218,6 +219,13 @@
 			<version>${junit.version}</version>
 			<scope>test</scope>
         </dependency>
+		<dependency>
+			<groupId>com.alibaba</groupId>
+			<artifactId>fastjson</artifactId>
+			<optional>true</optional>
+			<version>1.2.58</version>
+			<scope>test</scope>
+		</dependency>
 		<!-- junit 多线程测试 -->
 		<dependency>
 			<groupId>net.sourceforge.groboutils</groupId>

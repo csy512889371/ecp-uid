@@ -7,7 +7,7 @@ import java.net.ServerSocket;
 /**
  * @类名称 WorkerIdUtils.java
  * @类描述 <pre>workid 文件操作类</pre>
- * @作者  庄梦蝶殇 linhuaichuan@veredholdings.com
+ * @作者  庄梦蝶殇 linhuaichuan1989@126.com
  * @创建时间 2019年1月16日 下午2:31:31
  * @版本 1.0.0
  *
@@ -34,12 +34,13 @@ public class WorkerIdUtils {
      */
     public static String getPidName(Integer pidPort, ServerSocket socket) {
         String pidName = NetUtils.getLocalInetAddress().getHostAddress();
-        if (-1 != pidPort) {// 占用端口
+        if (-1 != pidPort) {
+            // 占用端口
             pidPort = null != pidPort && pidPort > 0 ? pidPort : NetUtils.getAvailablePort();
             try {
                 socket = new ServerSocket(pidPort);
             } catch (IOException e) {
-                e.printStackTrace();
+                throw new RuntimeException("接口占用失败！");
             }
         }
         return pidName + WorkerIdUtils.WORKER_SPLIT + pidPort;

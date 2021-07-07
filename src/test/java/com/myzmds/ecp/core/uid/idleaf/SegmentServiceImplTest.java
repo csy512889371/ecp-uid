@@ -43,7 +43,7 @@ public class SegmentServiceImplTest extends Thread {
             }
         };
         // 开13，23，43个线程进行测试,step设置为10
-        int runnerCount = 23;
+        int runnerCount = 43;
         TestRunnable[] trs = new TestRunnable[runnerCount];
         for (int i = 0; i < runnerCount; i++) {
             trs[i] = runner;

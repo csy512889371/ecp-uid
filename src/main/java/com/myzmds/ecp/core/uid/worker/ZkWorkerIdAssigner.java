@@ -2,7 +2,6 @@ package com.myzmds.ecp.core.uid.worker;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.text.DecimalFormat;
 import java.util.List;
 
 import org.apache.zookeeper.CreateMode;
@@ -63,7 +62,9 @@ public class ZkWorkerIdAssigner extends AbstractIntervalWorkId {
      */
     public static final int CONNECTION_TIMEOUT = 30000;
     
-    //
+    /**
+     * zk客户端
+     */
     private ZooKeeper zkClient;
     
     /**
@@ -120,20 +121,6 @@ public class ZkWorkerIdAssigner extends AbstractIntervalWorkId {
             }
             
             temporaryNode = zkClient.create(UID_TEMPORARY + ZK_SPLIT + workerId, longToBytes(System.currentTimeMillis()), Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
-            // 临时节点在下线时自动删除，无需监控
-            // zkClient.subscribeDataChanges(UID_TEMPORARY + ZK_SPLIT + serverId, new IZkDataListener() {
-            // @Override
-            // public void handleDataDeleted(String dataPath)
-            // throws Exception {
-            // System.out.println("节点" + dataPath + "的数据：");
-            // }
-            //
-            // @Override
-            // public void handleDataChange(String dataPath, Object data)
-            // throws Exception {
-            // System.out.println("节点" + dataPath + "的数据：" + data);
-            // }
-            // });
             active.set(true);
             
             /**
@@ -156,8 +143,6 @@ public class ZkWorkerIdAssigner extends AbstractIntervalWorkId {
     public boolean where() {
         return null != workerId && null != zkClient;
     }
-    
-    static final DecimalFormat df = new DecimalFormat("");
     
     @Override
     public void report() {
